@@ -344,7 +344,7 @@ def plot_mean_nstep_error_map(method, truth, prediction=None):
        diff_mean = np.mean(diff_all, axis = 0) # L2 norm across the velocity components
        # Using 'inferno' or 'magma' helps distinguish the error map from the weather map
        im_diff = ax.imshow(diff_mean, origin='lower', extent=extent,
-                           cmap='versicolor', vmin=0, vmax=diff_vmax)
+                           cmap='inferno', vmin=0, vmax=diff_vmax)
 
        # Add colorbars to the right side of each row
        fig.colorbar(im_diff, ax=ax, aspect=2, label="Absolute Error")
