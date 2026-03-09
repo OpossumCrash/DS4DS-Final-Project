@@ -216,7 +216,7 @@ def plot_multistep_error_barplot(truth, prediction, title, steps, method):
     fig, ax = plt.subplots()
     ax.bar(range(0, len(steps)), error_mean)
 
-    ax.set_xticks(range(0, len(steps)), steps)
+    ax.set_xticks(range(0, len(steps)), steps+1)
     ax.spines[['top', 'right', 'bottom']].set_visible(False)
     ax.yaxis.grid(True)
 
@@ -249,7 +249,7 @@ def plot_multistep_error_boxplot(truth, prediction, title, steps, method):
                positions=range(0, len(steps)),
                meanline=False, showmeans=True, showbox=None, showfliers = False, label = "SE")
 
-    ax.set_xticks(range(0, len(steps)), steps)
+    ax.set_xticks(range(0, len(steps)), steps+1)
     ax.spines[['top', 'right', 'bottom']].set_visible(False)
     ax.yaxis.grid(True)
 
@@ -290,7 +290,7 @@ def plot_multistep_comparison_boxplot(truth, pred, methods, title, steps):
         hue="Model",
         showfliers=False
     )
-    ax.set_xticks(range(0, len(steps)), steps)
+    ax.set_xticks(range(0, len(steps)), steps+1)
     ax.tick_params(bottom = False)
     ax.spines[['top', 'right', 'bottom']].set_visible(False)
     ax.yaxis.grid(True)
@@ -347,7 +347,8 @@ def plot_mean_nstep_error_map(method, truth, prediction=None):
 
        # Add colorbars to the right side of each row
        fig.colorbar(im_diff, ax=ax, aspect=2, label="Absolute Error")
-       ax.set(title = "L2 error of the velocity vector field")
+       ax.set(title = "L2 error of the velocity vector field",
+              xlabel = "Longitude", ylabel = "Latitude")
        plt.grid(None)
 
        filename = f"firststep_mean_error_map_{method}.pdf"
