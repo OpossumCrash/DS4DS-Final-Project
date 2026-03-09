@@ -1,6 +1,8 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-
+import seaborn as sns
+from matplotlib.colors import hsv_to_rgb
 
 def plot_weather(truth, prediction=None, num_steps=5):
     """
@@ -43,7 +45,7 @@ def plot_weather(truth, prediction=None, num_steps=5):
         vmax = max(vmax, np.max(pred_mag_all))
         
         # Calculate global max for the difference (error) plot
-        diff_vmax = np.max(np.abs(truth_mag_all - pred_mag_all))
+        diff_vmax = np.max(np.linalg.norm(truth - prediction, axis=1))
 
     for i, t in enumerate(timesteps):
         # --- Row 1: Ground Truth ---
@@ -84,10 +86,6 @@ def plot_weather(truth, prediction=None, num_steps=5):
         fig.colorbar(im_diff, ax=axes[2, :], aspect=20, label="Absolute Error")
 
     plt.suptitle("Weather Simulation: Ground Truth vs. Prediction", fontsize=16)
-    
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.colors import hsv_to_rgb
 
 def velocity_to_rgb(u, v, vmax):
     """
@@ -166,3 +164,191 @@ def plot_weather_colored(truth, prediction=None, num_steps=5):
         fig.colorbar(im_diff, ax=axes[2, :], aspect=20, label="Error Magnitude")
 
     plt.suptitle("Weather Simulation: Directional Color Coding", fontsize=16)
+
+def plot_loss_curve(data, method, title, mean = False):
+    """
+    Plots loss curve of a model during training.
+    Args:
+        data: dataset with loss values over epochs
+        method: model name to access data
+        title: title of the plot
+        mean: whether to plot mean loss per trajectory in train/test dataset
+    """
+    fig, ax = plt.subplots()
+    if mean:
+        ax.plot(data["epoch"], data["train_loss"]/16, label = "Train data")
+        ax.plot(data["epoch"], data["test_loss"]/4, label = "Test data")
+    else:
+        ax.plot(data["epoch"], data["train_loss"], label = "Train data")
+        ax.plot(data["epoch"], data["test_loss"], label = "Test data")
+
+    ax.set_xticks(data["epoch"])
+
+    ax.set_title(title)
+    ax.set_xlabel("Number of epochs")
+    ax.set_ylabel("MSE")
+    ax.legend()
+    if mean:
+        filename = f"loss_{method}_mean.pdf"
+    else:
+        filename = f"loss_{method}.pdf"
+
+    plt.savefig("plots/"+filename, dpi=150, bbox_inches="tight")
+
+def plot_multistep_error_barplot(truth, prediction, title, steps, method):
+
+    if truth.shape != prediction.shape:
+        raise ValueError("truth and prediction must have identical shapes")
+
+    if truth.shape[1] != len(steps):
+        raise ValueError("Number of steps does not match timestep dimension")
+
+    # Compute vector error
+    error = np.linalg.norm(truth - prediction, axis=2)
+    # shape -> (traj, timestep, 128, 256)
+
+    # Reshape so each timestep contains all errors
+    error_reshaped = error.transpose(1,0,2,3).reshape(len(steps), -1)
+
+    # Mean error per timestep
+    error_mean = np.mean(error_reshaped, axis=1)
+
+    fig, ax = plt.subplots()
+    ax.bar(range(0, len(steps)), error_mean)
+
+    ax.set_xticks(range(0, len(steps)), steps)
+    ax.spines[['top', 'right', 'bottom']].set_visible(False)
+    ax.yaxis.grid(True)
+
+    ax.set(title = title, axisbelow = True,
+           xlabel = "Number of steps", ylabel = "L2 error of the velocity vector field")
+
+    filename = f"multistep_error_barplot_{method}.pdf"
+    plt.savefig("plots/"+filename, dpi=150, bbox_inches="tight")
+
+
+def plot_multistep_error_boxplot(truth, prediction, title, steps, method):
+
+    if truth.shape != prediction.shape:
+        raise ValueError("Truth and prediction must have identical shapes")
+
+    if truth.shape[1] != len(steps):
+        raise ValueError("Number of steps does not match timestep dimension")
+
+    # Compute vector error
+    error = np.linalg.norm(truth - prediction, axis=2)
+    # shape -> (traj, timestep, 128, 256)
+
+    # Reshape so each timestep contains all errors
+    error_reshaped = error.transpose(1,0,2,3).reshape(len(steps), -1)
+
+    box_data = [error_reshaped[i] for i in range(len(steps))]
+
+    fig, ax = plt.subplots()
+    ax.boxplot(box_data, vert = True,
+               positions=range(0, len(steps)),
+               meanline=False, showmeans=True, showbox=None, showfliers = False, label = "SE")
+
+    ax.set_xticks(range(0, len(steps)), steps)
+    ax.spines[['top', 'right', 'bottom']].set_visible(False)
+    ax.yaxis.grid(True)
+
+    ax.set(title = title, axisbelow = True,
+           xlabel = "Number of steps", ylabel = "L2 error of the velocity vector field")
+    ax.legend()
+
+    filename = f"multistep_error_boxplot_{method}.pdf"
+    plt.savefig("plots/"+filename, dpi=150, bbox_inches="tight")
+
+def plot_multistep_comparison_boxplot(truth, pred, methods, title, steps):
+
+    rows = []
+
+    for model_name in methods:
+        # mat: (traj, t, ch, x, y)
+        truth_mat = truth[model_name]
+        pred_mat = pred[model_name]
+        error = np.linalg.norm(truth_mat - pred_mat, axis=2)
+        error = error.transpose(1,0,2,3)  # (t, traj, x, y)
+        for t in range(error.shape[0]):
+            vals = error[t].ravel()
+            rows.append(
+                pd.DataFrame({
+                    "Timestep": steps[t],
+                    "Error": vals,
+                    "Model": model_name
+                })
+            )
+
+    df_error = pd.concat(rows, ignore_index=True)
+    fig, ax = plt.subplots()
+
+    sns.boxplot(
+        data=df_error,
+        x="Timestep",
+        y="Error",
+        hue="Model",
+        showfliers=False
+    )
+    ax.set_xticks(range(0, len(steps)), steps)
+    ax.tick_params(bottom = False)
+    ax.spines[['top', 'right', 'bottom']].set_visible(False)
+    ax.yaxis.grid(True)
+
+    ax.set(title = title, axisbelow = True,
+           xlabel = "Number of steps", ylabel = "Vector Error Magnitude")
+
+    ax.legend(title = "Model",
+              bbox_to_anchor=(1.52, 0.5),   # move legend outside
+              loc="right",
+              borderaxespad=0)
+
+    filename = f"multistep_comparison_boxplot.pdf"
+    plt.savefig("plots/"+filename, dpi=150, bbox_inches="tight")
+
+
+def plot_mean_nstep_error_map(method, truth, prediction=None):
+    """
+    Plots mean vector error magnitude for 1-step prediction over all samples.
+
+    Args:
+        truth: numpy array of shape (1, 2, 128, 256) representing ground truth.
+        prediction: Optional numpy array of shape (1, 2, 128, 256) representing the model's output.
+        step: Integer specifying how many steps ahead the model predictions are observed.
+    """
+
+    # 2D Earth coordinate translation
+    extent = [-180, 180, -90, 90]
+
+    # Calculate global min/max for the velocity magnitude to keep color scales locked
+    truth_mag_all = np.linalg.norm(truth, axis=1)
+    vmin, vmax = np.min(truth_mag_all), np.max(truth_mag_all)
+
+    if prediction is not None:
+        pred_mag_all = np.linalg.norm(prediction, axis=1)
+        vmin = min(vmin, np.min(pred_mag_all))
+        vmax = max(vmax, np.max(pred_mag_all))
+
+        diff_all = np.linalg.norm(truth - prediction, axis=1)
+        # Calculate global max for the difference (error) plot
+        diff_vmax = diff_all.max()
+
+
+    if prediction is None:
+        return 0
+    else:
+
+       fig, ax = plt.subplots(figsize = (10, 8))
+       # Mean difference over trajectories
+       diff_mean = np.mean(diff_all, axis = 0) # L2 norm across the velocity components
+       # Using 'inferno' or 'magma' helps distinguish the error map from the weather map
+       im_diff = ax.imshow(diff_mean, origin='lower', extent=extent,
+                           cmap='versicolor', vmin=0, vmax=diff_vmax)
+
+       # Add colorbars to the right side of each row
+       fig.colorbar(im_diff, ax=ax, aspect=2, label="Absolute Error")
+       ax.set(title = "L2 error of the velocity vector field")
+       plt.grid(None)
+
+       filename = f"firststep_mean_error_map_{method}.pdf"
+       plt.savefig("plots/"+filename, dpi=150, bbox_inches="tight")
