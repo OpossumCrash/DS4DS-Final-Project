@@ -216,7 +216,7 @@ def plot_multistep_error_barplot(truth, prediction, title, steps, method):
     fig, ax = plt.subplots()
     ax.bar(range(0, len(steps)), error_mean)
 
-    ax.set_xticks(range(0, len(steps)), steps+1)
+    ax.set_xticks(range(0, len(steps)), [i + 1 for i in steps])
     ax.spines[['top', 'right', 'bottom']].set_visible(False)
     ax.yaxis.grid(True)
 
@@ -225,6 +225,7 @@ def plot_multistep_error_barplot(truth, prediction, title, steps, method):
 
     filename = f"multistep_error_barplot_{method}.pdf"
     plt.savefig("plots/"+filename, dpi=150, bbox_inches="tight")
+    return error_mean
 
 
 def plot_multistep_error_boxplot(truth, prediction, title, steps, method):
@@ -249,7 +250,7 @@ def plot_multistep_error_boxplot(truth, prediction, title, steps, method):
                positions=range(0, len(steps)),
                meanline=False, showmeans=True, showbox=None, showfliers = False, label = "SE")
 
-    ax.set_xticks(range(0, len(steps)), steps+1)
+    ax.set_xticks(range(0, len(steps)), [i + 1 for i in steps])
     ax.spines[['top', 'right', 'bottom']].set_visible(False)
     ax.yaxis.grid(True)
 
@@ -259,6 +260,7 @@ def plot_multistep_error_boxplot(truth, prediction, title, steps, method):
 
     filename = f"multistep_error_boxplot_{method}.pdf"
     plt.savefig("plots/"+filename, dpi=150, bbox_inches="tight")
+
 
 def plot_multistep_comparison_boxplot(truth, pred, methods, title, steps):
 
@@ -290,7 +292,7 @@ def plot_multistep_comparison_boxplot(truth, pred, methods, title, steps):
         hue="Model",
         showfliers=False
     )
-    ax.set_xticks(range(0, len(steps)), steps+1)
+    ax.set_xticks(range(0, len(steps)), [i + 1 for i in steps])
     ax.tick_params(bottom = False)
     ax.spines[['top', 'right', 'bottom']].set_visible(False)
     ax.yaxis.grid(True)
@@ -333,7 +335,6 @@ def plot_mean_nstep_error_map(method, truth, prediction=None):
         # Calculate global max for the difference (error) plot
         diff_vmax = diff_all.max()
 
-
     if prediction is None:
         return 0
     else:
@@ -343,7 +344,7 @@ def plot_mean_nstep_error_map(method, truth, prediction=None):
        diff_mean = np.mean(diff_all, axis = 0) # L2 norm across the velocity components
        # Using 'inferno' or 'magma' helps distinguish the error map from the weather map
        im_diff = ax.imshow(diff_mean, origin='lower', extent=extent,
-                           cmap='versicolor', vmin=0, vmax=diff_vmax)
+                           cmap='inferno', vmin=0, vmax=diff_vmax)
 
        # Add colorbars to the right side of each row
        fig.colorbar(im_diff, ax=ax, aspect=2, label="Absolute Error")
