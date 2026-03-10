@@ -220,3 +220,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+.idea/misc.xml
+/data
+.idea/misc.xml
+/.idea
+/results/dmd/Новая папка
+/results/fno/fno_gif_frames
+/results/tfno/tfno_gif_frames
